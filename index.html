@@ -908,74 +908,83 @@
         const ox = this.toCanvasX(0), oy = this.toCanvasY(0);
         const arrowSize = 10 * this.dpr;
 
-        // Axes lines
+        ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 1.5 * this.dpr;
-        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();  // Y-axis
-        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();  // X-axis
+        ctx.lineWidth = 1.2 * this.dpr;
 
-        // --- Arrowheads ---
+        // Draw Axes Lines (full spanning)
+        // Y-axis
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();
+        // X-axis
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();
+
+        // --- Arrowheads (Triangular) ---
         ctx.fillStyle = '#000000';
+        // Y-up
+        ctx.beginPath(); ctx.moveTo(ox, 0);
+        ctx.lineTo(ox - arrowSize * 0.4, arrowSize); ctx.lineTo(ox + arrowSize * 0.4, arrowSize);
+        ctx.fill();
+        // Y-down
+        ctx.beginPath(); ctx.moveTo(ox, h);
+        ctx.lineTo(ox - arrowSize * 0.4, h - arrowSize); ctx.lineTo(ox + arrowSize * 0.4, h - arrowSize);
+        ctx.fill();
+        // X-right
+        ctx.beginPath(); ctx.moveTo(w, oy);
+        ctx.lineTo(w - arrowSize, oy - arrowSize * 0.4); ctx.lineTo(w - arrowSize, oy + arrowSize * 0.4);
+        ctx.fill();
+        // X-left
+        ctx.beginPath(); ctx.moveTo(0, oy);
+        ctx.lineTo(arrowSize, oy - arrowSize * 0.4); ctx.lineTo(arrowSize, oy + arrowSize * 0.4);
+        ctx.fill();
 
-        // Y-axis top arrow
-        ctx.beginPath();
-        ctx.moveTo(ox, 0);
-        ctx.lineTo(ox - arrowSize * 0.45, arrowSize);
-        ctx.lineTo(ox + arrowSize * 0.45, arrowSize);
-        ctx.closePath(); ctx.fill();
-
-        // Y-axis bottom arrow
-        ctx.beginPath();
-        ctx.moveTo(ox, h);
-        ctx.lineTo(ox - arrowSize * 0.45, h - arrowSize);
-        ctx.lineTo(ox + arrowSize * 0.45, h - arrowSize);
-        ctx.closePath(); ctx.fill();
-
-        // X-axis right arrow
-        ctx.beginPath();
-        ctx.moveTo(w, oy);
-        ctx.lineTo(w - arrowSize, oy - arrowSize * 0.45);
-        ctx.lineTo(w - arrowSize, oy + arrowSize * 0.45);
-        ctx.closePath(); ctx.fill();
-
-        // X-axis left arrow
-        ctx.beginPath();
-        ctx.moveTo(0, oy);
-        ctx.lineTo(arrowSize, oy - arrowSize * 0.45);
-        ctx.lineTo(arrowSize, oy + arrowSize * 0.45);
-        ctx.closePath(); ctx.fill();
-
-        // --- Axis labels ---
-        ctx.font = `bold ${14 * this.dpr}px Inter, sans-serif`;
-        ctx.fillStyle = '#000000';
-        ctx.textAlign = 'left';
-        ctx.fillText('y', ox + 8 * this.dpr, arrowSize + 14 * this.dpr);  // near top of y-axis
+        // --- Axis Labels: 'x' and 'y' ---
+        ctx.font = `bold ${16 * this.dpr}px Inter, sans-serif`;
+        // 'y' label near top
+        ctx.textAlign = (ox > w - 50 * this.dpr) ? 'right' : 'left';
+        ctx.fillText('y', (ox > w - 50 * this.dpr) ? ox - 10 * this.dpr : ox + 10 * this.dpr, arrowSize + 16 * this.dpr);
+        // 'x' label near right
         ctx.textAlign = 'right';
-        ctx.fillText('x', w - arrowSize - 4 * this.dpr, oy - 8 * this.dpr);  // near right of x-axis
+        ctx.textBaseline = (oy < 40 * this.dpr) ? 'top' : 'bottom';
+        ctx.fillText('x', w - arrowSize - 8 * this.dpr, (oy < 40 * this.dpr) ? oy + 8 * this.dpr : oy - 8 * this.dpr);
 
-        // Tick labels
+        // --- Tick Labels ---
         const xStep = this._niceStep(this.xMax - this.xMin, 10);
         const yStep = this._niceStep(this.yMax - this.yMin, 10);
-        ctx.fillStyle = '#333333';
         ctx.font = `${11 * this.dpr}px Inter, sans-serif`;
+        ctx.fillStyle = '#444444';
+        ctx.textBaseline = 'alphabetic';
+
+        // X-ticks
+        const xStart = Math.ceil(this.xMin / xStep) * xStep;
         ctx.textAlign = 'center';
-
-        let x0 = Math.ceil(this.xMin / xStep) * xStep;
-        for (let x = x0; x <= this.xMax; x += xStep) {
-          if (Math.abs(x) < xStep * 0.01) continue;
+        for (let x = xStart; x <= this.xMax; x += xStep) {
+          if (Math.abs(x) < xStep * 0.01) continue; // skip origin
           const px = this.toCanvasX(x);
-          const label = Math.abs(x) < 1e-10 ? '0' : Number(x.toFixed(6));
-          ctx.fillText(label, px, oy + 16 * this.dpr);
+          const label = Number(x.toFixed(3));
+          let labelY = oy + 16 * this.dpr;
+          // Keep label in canvas if axis is too high/low
+          if (oy > h - 25 * this.dpr) labelY = oy - 8 * this.dpr;
+          else if (oy < 15 * this.dpr) labelY = oy + 18 * this.dpr;
+          ctx.fillText(label, px, labelY);
         }
 
-        ctx.textAlign = 'right';
-        let y0g = Math.ceil(this.yMin / yStep) * yStep;
-        for (let y = y0g; y <= this.yMax; y += yStep) {
-          if (Math.abs(y) < yStep * 0.01) continue;
+        // Y-ticks
+        const yStart = Math.ceil(this.yMin / yStep) * yStep;
+        for (let y = yStart; y <= this.yMax; y += yStep) {
+          if (Math.abs(y) < yStep * 0.01) continue; // skip origin
           const py = this.toCanvasY(y);
-          const label = Math.abs(y) < 1e-10 ? '0' : Number(y.toFixed(6));
-          ctx.fillText(label, ox - 8 * this.dpr, py + 4 * this.dpr);
+          const label = Number(y.toFixed(3));
+          let labelX = ox - 8 * this.dpr;
+          // Position relative to axis line
+          if (ox < 35 * this.dpr) {
+            ctx.textAlign = 'left';
+            labelX = ox + 8 * this.dpr;
+          } else {
+            ctx.textAlign = 'right';
+          }
+          ctx.fillText(label, labelX, py + 4 * this.dpr);
         }
+        ctx.restore();
       }
 
       _drawCurve() {
@@ -1076,19 +1085,24 @@
         ctx.fillStyle = '#ff007f';
         ctx.textAlign = 'left';
 
-        // Position: two lines stacked above the point
+        // Position: two lines stacked above the point — flip if near top
         const labelX = px + 12 * this.dpr;
         const lineGap = fontSize * 1.25;
-        const labelY1 = py - lineGap * 2.0;   // first line
-        const labelY2 = labelY1 + lineGap;     // second line (below)
+        let labelY1 = py - lineGap * 2.1;
+        if (labelY1 < fontSize * 1.5) labelY1 = py + 25 * this.dpr; // flip below point
+        const labelY2 = labelY1 + lineGap;
 
         // Background sized for both lines
         const tw1 = ctx.measureText(line1).width;
         const tw2 = ctx.measureText(line2).width;
         const textW = Math.max(tw1, tw2);
         const textH = lineGap * 2.2;
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 8 * this.dpr, textH + 4 * this.dpr);
+
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 10 * this.dpr, textH);
+        ctx.strokeStyle = '#ff007f33';
+        ctx.lineWidth = 1 * this.dpr;
+        ctx.strokeRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 10 * this.dpr, textH);
 
         ctx.fillStyle = '#ff007f';
         ctx.fillText(line1, labelX, labelY1);
@@ -1135,11 +1149,16 @@
         const textW = textMetrics.width;
         const textH = fontSize * 1.1;
 
-        // Background for readability
+        // Background for readability — flip if near top
         const labelX = px + 12 * this.dpr;
-        const labelY = py - fontSize * 1.0;
-        ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(labelX - 3 * this.dpr, labelY - textH, textW + 6 * this.dpr, textH + 4 * this.dpr);
+        let labelY = py - fontSize * 1.1;
+        if (labelY < fontSize * 1.2) labelY = py + 25 * this.dpr; // flip below
+
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
+        ctx.fillRect(labelX - 4 * this.dpr, labelY - textH + 2 * this.dpr, textW + 10 * this.dpr, textH);
+        ctx.strokeStyle = '#0000ff33';
+        ctx.lineWidth = 1 * this.dpr;
+        ctx.strokeRect(labelX - 4 * this.dpr, labelY - textH + 2 * this.dpr, textW + 10 * this.dpr, textH);
 
         ctx.fillStyle = '#0000ff';
         ctx.textAlign = 'left';
