@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Visualise mathematical functions and their derivatives on interactive Cartesian planes. A learning tool for students.">
+  <title>Function &amp; Derivative Visualiser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ===== CSS Reset & Variables ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-panel: #d6e8f7;
+      --bg-input: #e8f1fa;
+      --border: #a8c4df;
+      --accent: #7c6aff;
+      --accent-glow: rgba(124, 106, 255, .35);
+      --accent2: #00e5a0;
+      --accent2-glow: rgba(0, 229, 160, .30);
+      --text: #1a1a2e;
+      --text-muted: #4a5568;
+      --curve-fn: #000000;
+      --curve-deriv: #0000ff;
+      --grid: #1e1e38;
+      --axis: #4a4a6a;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, .4);
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      overflow: hidden;
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 5fr;
+      grid-template-rows: 1fr 1fr;
+      height: 100vh;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    /* ===== Left Panels (shared styling) ===== */
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-muted);
+    }
+
+    /* --- Input Panel (top-left) --- */
+    #input-panel {
+      grid-column: 1;
+      grid-row: 1;
+      overflow-y: auto;
+    }
+
+    .input-group {
+      padding: 12px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .input-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    #fn-input,
+    .range-input {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--text);
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+      width: 100%;
+    }
+
+    #fn-input:focus,
+    .range-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    #fn-input::placeholder,
+    .range-input::placeholder {
+      color: #8899aa;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .range-field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    #enter-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 0;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), #9b6aff);
+      color: #fff;
+      letter-spacing: .4px;
+      transition: transform .15s, box-shadow .25s;
+    }
+
+    #enter-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--accent-glow);
+    }
+
+    #enter-btn:active {
+      transform: scale(.97);
+    }
+
+    #error-msg {
+      font-size: 12px;
+      color: #ff6b8a;
+      min-height: 18px;
+      transition: opacity .3s;
+    }
+
+    .hint {
+      margin-top: auto;
+      padding: 0 20px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    .hint code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-input);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* --- Derivative Panel (bottom-left) --- */
+    #deriv-panel {
+      grid-column: 1;
+      grid-row: 2;
+    }
+
+    .deriv-display {
+      padding: 16px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 14px;
+    }
+
+    .fn-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .fn-expr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      word-break: break-word;
+      line-height: 1.6;
+    }
+
+    .fn-expr.original {
+      background: rgba(0, 0, 0, .05);
+      border-left: 3px solid var(--curve-fn);
+      color: var(--curve-fn);
+    }
+
+    .fn-expr.derivative {
+      background: rgba(0, 0, 255, .05);
+      border-left: 3px solid var(--curve-deriv);
+      color: var(--curve-deriv);
+    }
+
+    .fn-placeholder {
+      font-size: 13px;
+      color: #7788aa;
+      font-style: italic;
+    }
+
+    /* ===== Canvas Panels (right) ===== */
+    .canvas-panel {
+      grid-column: 2;
+      position: relative;
+    }
+
+    .canvas-panel.top {
+      grid-row: 1;
+    }
+
+    .canvas-panel.bottom {
+      grid-row: 2;
+    }
+
+    .canvas-panel canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      display: block;
+    }
+
+    .canvas-label {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .canvas-label.fn {
+      background: rgba(0, 0, 0, .05);
+      color: var(--curve-fn);
+      border: 1px solid rgba(0, 0, 0, .15);
+    }
+
+    .canvas-label.deriv {
+      background: rgba(0, 0, 255, .05);
+      color: var(--curve-deriv);
+      border: 1px solid rgba(0, 0, 255, .15);
+    }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #8aaccf;
+      border-radius: 3px;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto auto auto auto;
+      }
+
+      #input-panel {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .canvas-panel.top {
+        grid-column: 1;
+        grid-row: 2;
+        min-height: 280px;
+      }
+
+      #deriv-panel {
+        grid-column: 1;
+        grid-row: 3;
+      }
+
+      .canvas-panel.bottom {
+        grid-column: 1;
+        grid-row: 4;
+        min-height: 280px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- Top-left: Function Input -->
+    <div class="panel" id="input-panel">
+      <div class="panel-header">Function Input</div>
+      <div class="input-group">
+        <label for="fn-input">f(x) =</label>
+        <input type="text" id="fn-input" placeholder="e.g.  x^3 - 2*x + 1" autocomplete="off" spellcheck="false" />
+
+        <label style="margin-top:4px;">f(x) Axis Range</label>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-xmin">x min</label>
+            <input type="number" id="range-xmin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-xmax">x max</label>
+            <input type="number" id="range-xmax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-ymin">y min</label>
+            <input type="number" id="range-ymin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-ymax">y max</label>
+            <input type="number" id="range-ymax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+
+        <button id="enter-btn">ENTER</button>
+        <div id="error-msg"></div>
+      </div>
+      <div class="hint">
+        Supported: <code>x</code>, <code>^</code>, <code>sin</code>, <code>cos</code>,
+        <code>tan</code>, <code>ln</code>, <code>sqrt</code>, <code>e</code>, <code>pi</code>
+      </div>
+    </div>
+
+    <!-- Top-right: f(x) graph -->
+    <div class="panel canvas-panel top" id="fn-canvas-panel">
+      <span class="canvas-label fn">f(x)</span>
+      <canvas id="canvas-fn"></canvas>
+    </div>
+
+    <!-- Bottom-left: Derivative display -->
+    <div class="panel" id="deriv-panel">
+      <div class="panel-header">Derivative</div>
+      <div class="deriv-display" id="deriv-display">
+        <div class="fn-placeholder" id="fn-placeholder-orig">Enter a function above…</div>
+      </div>
+      <div class="input-group" style="padding-top:0;">
+        <label>f ′(x) Axis Range</label>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-dxmin">x min</label>
+            <input type="number" id="range-dxmin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-dxmax">x max</label>
+            <input type="number" id="range-dxmax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-dymin">y min</label>
+            <input type="number" id="range-dymin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-dymax">y max</label>
+            <input type="number" id="range-dymax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <button id="deriv-enter-btn"
+          style="font-family:'Inter',sans-serif;font-size:14px;font-weight:600;padding:12px 0;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(135deg,var(--accent),#9b6aff);color:#fff;letter-spacing:.4px;transition:transform .15s,box-shadow .25s;margin-top:4px;">ENTER</button>
+        <button id="lock-btn"
+          style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:10px 0;border:2px solid var(--accent);border-radius:10px;cursor:pointer;background:transparent;color:var(--accent);letter-spacing:.4px;transition:all .2s;margin-top:4px;">🔓
+          Lock Points</button>
+      </div>
+    </div>
+
+    <!-- Bottom-right: f'(x) graph -->
+    <div class="panel canvas-panel bottom" id="deriv-canvas-panel">
+      <span class="canvas-label deriv">f ′(x)</span>
+      <canvas id="canvas-deriv"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    /* ==========================================================
+       MATH ENGINE — Tokeniser → Parser → AST → Derivative → Eval
+       ========================================================== */
+
+    // ---- Token types ----
+    const T = {
+      NUM: 'NUM', VAR: 'VAR', OP: 'OP', FN: 'FN',
+      LPAR: '(', RPAR: ')', COMMA: ',', POW: '^', END: 'END'
+    };
+
+    // ---- Tokeniser ----
+    function tokenise(expr) {
+      const tokens = [];
+      let i = 0;
+      const s = expr.replace(/\s+/g, '');
+      while (i < s.length) {
+        const c = s[i];
+        if ('0123456789.'.includes(c)) {
+          let num = '';
+          while (i < s.length && '0123456789.'.includes(s[i])) num += s[i++];
+          tokens.push({ type: T.NUM, value: parseFloat(num) });
+        } else if (c === 'x') {
+          tokens.push({ type: T.VAR }); i++;
+        } else if ('+-*/'.includes(c)) {
+          tokens.push({ type: T.OP, value: c }); i++;
+        } else if (c === '^') {
+          tokens.push({ type: T.POW }); i++;
+        } else if (c === '(') {
+          tokens.push({ type: T.LPAR }); i++;
+        } else if (c === ')') {
+          tokens.push({ type: T.RPAR }); i++;
+        } else if (c === ',') {
+          tokens.push({ type: T.COMMA }); i++;
+        } else if (/[a-zA-Z]/.test(c)) {
+          let name = '';
+          while (i < s.length && /[a-zA-Z]/.test(s[i])) name += s[i++];
+          if (name === 'e') tokens.push({ type: T.NUM, value: Math.E });
+          else if (name === 'pi') tokens.push({ type: T.NUM, value: Math.PI });
+          else tokens.push({ type: T.FN, value: name });
+        } else {
+          throw new Error(`Unexpected character: ${c}`);
+        }
+      }
+      tokens.push({ type: T.END });
+      return tokens;
+    }
+
+    // ---- AST Node constructors ----
+    const Num = v => ({ tag: 'num', v });
+    const Var = () => ({ tag: 'var' });
+    const BinOp = (op, l, r) => ({ tag: 'binop', op, l, r });
+    const UnaryMinus = a => ({ tag: 'unary', a });
+    const Fn = (name, arg) => ({ tag: 'fn', name, arg });
+
+    // ---- Recursive descent parser ----
+    function parse(tokens) {
+      let pos = 0;
+      const peek = () => tokens[pos];
+      const eat = (type) => {
+        if (tokens[pos].type !== type) throw new Error(`Expected ${type} but got ${tokens[pos].type}`);
+        return tokens[pos++];
+      };
+
+      function expr() { return addSub(); }
+
+      function addSub() {
+        let left = mulDiv();
+        while (peek().type === T.OP && (peek().value === '+' || peek().value === '-')) {
+          const op = eat(T.OP).value;
+          left = BinOp(op, left, mulDiv());
+        }
+        return left;
+      }
+
+      function mulDiv() {
+        let left = power();
+        while (peek().type === T.OP && (peek().value === '*' || peek().value === '/')) {
+          const op = eat(T.OP).value;
+          left = BinOp(op, left, power());
+        }
+        return left;
+      }
+
+      function power() {
+        let base = unary();
+        if (peek().type === T.POW) {
+          eat(T.POW);
+          const exp = power(); // right-associative
+          return BinOp('^', base, exp);
+        }
+        return base;
+      }
+
+      function unary() {
+        if (peek().type === T.OP && peek().value === '-') {
+          eat(T.OP);
+          return UnaryMinus(unary());
+        }
+        if (peek().type === T.OP && peek().value === '+') { eat(T.OP); return unary(); }
+        return atom();
+      }
+
+      function atom() {
+        const t = peek();
+        if (t.type === T.NUM) { eat(T.NUM); return Num(t.value); }
+        if (t.type === T.VAR) { eat(T.VAR); return Var(); }
+        if (t.type === T.FN) {
+          const name = eat(T.FN).value;
+          eat(T.LPAR);
+          const arg = expr();
+          eat(T.RPAR);
+          return Fn(name, arg);
+        }
+        if (t.type === T.LPAR) {
+          eat(T.LPAR);
+          const node = expr();
+          eat(T.RPAR);
+          return node;
+        }
+        throw new Error(`Unexpected token: ${t.type}`);
+      }
+
+      // Handle implicit multiplication e.g. 2x, 2(x+1)
+      function insertImplicitMul(tokens) {
+        const out = [];
+        for (let i = 0; i < tokens.length; i++) {
+          out.push(tokens[i]);
+          if (i + 1 < tokens.length) {
+            const a = tokens[i], b = tokens[i + 1];
+            const needsMul =
+              (a.type === T.NUM && (b.type === T.VAR || b.type === T.FN || b.type === T.LPAR)) ||
+              (a.type === T.VAR && (b.type === T.NUM || b.type === T.LPAR || b.type === T.FN)) ||
+              (a.type === T.RPAR && (b.type === T.VAR || b.type === T.NUM || b.type === T.FN || b.type === T.LPAR)) ||
+              (a.type === T.NUM && b.type === T.NUM && false);
+            if (needsMul) out.push({ type: T.OP, value: '*' });
+          }
+        }
+        return out;
+      }
+
+      // Re-run with implicit muls
+      tokens = insertImplicitMul(tokens);
+      pos = 0;
+
+      const ast = expr();
+      if (peek().type !== T.END) throw new Error('Unexpected input after expression');
+      return ast;
+    }
+
+    // ---- Symbolic differentiation ----
+    function diff(node) {
+      switch (node.tag) {
+        case 'num': return Num(0);
+        case 'var': return Num(1);
+        case 'unary': return UnaryMinus(diff(node.a));
+        case 'binop': {
+          const { op, l, r } = node;
+          if (op === '+' || op === '-') return BinOp(op, diff(l), diff(r));
+          if (op === '*') return BinOp('+', BinOp('*', diff(l), r), BinOp('*', l, diff(r)));
+          if (op === '/') return BinOp('/', BinOp('-', BinOp('*', diff(l), r), BinOp('*', l, diff(r))), BinOp('^', r, Num(2)));
+          if (op === '^') {
+            if (!hasVar(r)) return BinOp('*', BinOp('*', r, BinOp('^', l, BinOp('-', r, Num(1)))), diff(l));
+            if (!hasVar(l)) return BinOp('*', BinOp('*', node, Fn('ln', l)), diff(r));
+            return BinOp('*', node, BinOp('+', BinOp('*', diff(r), Fn('ln', l)), BinOp('*', r, BinOp('/', diff(l), l))));
+          }
+        }
+        case 'fn': {
+          const u = node.arg, du = diff(u);
+          switch (node.name) {
+            case 'sin': return BinOp('*', Fn('cos', u), du);
+            case 'cos': return BinOp('*', UnaryMinus(Fn('sin', u)), du);
+            case 'tan': return BinOp('*', BinOp('^', Fn('cos', u), Num(-2)), du);
+            case 'ln': return BinOp('*', BinOp('/', Num(1), u), du);
+            case 'log': return BinOp('*', BinOp('/', Num(1), BinOp('*', u, Fn('ln', Num(10)))), du);
+            case 'sqrt': return BinOp('*', BinOp('/', Num(1), BinOp('*', Num(2), Fn('sqrt', u))), du);
+            case 'exp': return BinOp('*', Fn('exp', u), du);
+            case 'abs': return BinOp('*', BinOp('/', u, Fn('abs', u)), du);
+            default: throw new Error(`Unknown function: ${node.name}`);
+          }
+        }
+        default: throw new Error(`Cannot differentiate: ${node.tag}`);
+      }
+    }
+
+    function hasVar(node) {
+      if (node.tag === 'var') return true;
+      if (node.tag === 'num') return false;
+      if (node.tag === 'unary') return hasVar(node.a);
+      if (node.tag === 'binop') return hasVar(node.l) || hasVar(node.r);
+      if (node.tag === 'fn') return hasVar(node.arg);
+      return false;
+    }
+
+    // ---- Simplifier (basic) ----
+    function simplify(n) {
+      if (n.tag === 'num' || n.tag === 'var') return n;
+      if (n.tag === 'unary') {
+        const a = simplify(n.a);
+        if (a.tag === 'num') return Num(-a.v);
+        return UnaryMinus(a);
+      }
+      if (n.tag === 'fn') return Fn(n.name, simplify(n.arg));
+      if (n.tag === 'binop') {
+        let l = simplify(n.l), r = simplify(n.r);
+        const op = n.op;
+        if (l.tag === 'num' && r.tag === 'num') {
+          if (op === '+') return Num(l.v + r.v);
+          if (op === '-') return Num(l.v - r.v);
+          if (op === '*') return Num(l.v * r.v);
+          if (op === '/' && r.v !== 0) return Num(l.v / r.v);
+          if (op === '^') return Num(Math.pow(l.v, r.v));
+        }
+        if (op === '+' && l.tag === 'num' && l.v === 0) return r;
+        if (op === '+' && r.tag === 'num' && r.v === 0) return l;
+        if (op === '-' && r.tag === 'num' && r.v === 0) return l;
+        if (op === '*' && l.tag === 'num' && l.v === 0) return Num(0);
+        if (op === '*' && r.tag === 'num' && r.v === 0) return Num(0);
+        if (op === '*' && l.tag === 'num' && l.v === 1) return r;
+        if (op === '*' && r.tag === 'num' && r.v === 1) return l;
+        if (op === '/' && r.tag === 'num' && r.v === 1) return l;
+        if (op === '^' && r.tag === 'num' && r.v === 0) return Num(1);
+        if (op === '^' && r.tag === 'num' && r.v === 1) return l;
+        return BinOp(op, l, r);
+      }
+      return n;
+    }
+
+    // ---- AST to string ----
+    function astToString(n, parentOp, isRight) {
+      if (n.tag === 'num') {
+        if (Number.isInteger(n.v)) return String(n.v);
+        if (Math.abs(n.v - Math.PI) < 1e-10) return 'π';
+        if (Math.abs(n.v - Math.E) < 1e-10) return 'e';
+        return n.v.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+      }
+      if (n.tag === 'var') return 'x';
+      if (n.tag === 'unary') {
+        const inner = astToString(n.a);
+        return n.a.tag === 'binop' ? `-(${inner})` : `-${inner}`;
+      }
+      if (n.tag === 'fn') return `${n.name}(${astToString(n.arg)})`;
+      if (n.tag === 'binop') {
+        const ls = astToString(n.l, n.op, false);
+        const rs = astToString(n.r, n.op, true);
+        let str;
+        if (n.op === '^') str = `${wrapIfComplex(n.l, ls)}^${wrapIfComplex(n.r, rs)}`;
+        else if (n.op === '*') str = `${ls} * ${rs}`;
+        else if (n.op === '/') str = `${ls} / ${rs}`;
+        else str = `${ls} ${n.op} ${rs}`;
+        const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '^': 3 };
+        if (parentOp && prec[parentOp] > prec[n.op]) return `(${str})`;
+        if (parentOp && prec[parentOp] === prec[n.op] && isRight && (parentOp === '-' || parentOp === '/')) return `(${str})`;
+        return str;
+      }
+      return '?';
+    }
+    function wrapIfComplex(node, s) {
+      return (node.tag === 'binop' || node.tag === 'unary') ? `(${s})` : s;
+    }
+
+    // ---- AST evaluator ----
+    function evaluate(node, x) {
+      switch (node.tag) {
+        case 'num': return node.v;
+        case 'var': return x;
+        case 'unary': return -evaluate(node.a, x);
+        case 'binop': {
+          const l = evaluate(node.l, x), r = evaluate(node.r, x);
+          if (node.op === '+') return l + r;
+          if (node.op === '-') return l - r;
+          if (node.op === '*') return l * r;
+          if (node.op === '/') return r === 0 ? NaN : l / r;
+          if (node.op === '^') return Math.pow(l, r);
+        }
+        case 'fn': {
+          const a = evaluate(node.arg, x);
+          switch (node.name) {
+            case 'sin': return Math.sin(a);
+            case 'cos': return Math.cos(a);
+            case 'tan': return Math.cos(a) === 0 ? NaN : Math.tan(a);
+            case 'ln': return a <= 0 ? NaN : Math.log(a);
+            case 'log': return a <= 0 ? NaN : Math.log10(a);
+            case 'sqrt': return a < 0 ? NaN : Math.sqrt(a);
+            case 'exp': return Math.exp(a);
+            case 'abs': return Math.abs(a);
+            default: return NaN;
+          }
+        }
+      }
+      return NaN;
+    }
+
+    /* ==========================================================
+       CANVAS RENDERER
+       ========================================================== */
+    class GraphRenderer {
+      constructor(canvasId, curveColor, glowColor, mode) {
+        this.canvas = document.getElementById(canvasId);
+        this.ctx = this.canvas.getContext('2d');
+        this.curveColor = curveColor;
+        this.glowColor = glowColor;
+        this.mode = mode; // 'fn' or 'deriv'
+        this.ast = null;
+        this.xMin = -10; this.xMax = 10;
+        this.yMin = -10; this.yMax = 10;
+        this.panning = false;
+        this.panStart = { x: 0, y: 0 };
+        this.dragged = false;
+        this.markerX = null;       // the x-value of the interactive point
+        this.draggingMarker = false;
+        this.dpr = window.devicePixelRatio || 1;
+
+        this._setupEvents();
+        this._resize();
+        this.draw();
+      }
+
+      _setupEvents() {
+        window.addEventListener('resize', () => { this._resize(); this.draw(); });
+        this.canvas.addEventListener('wheel', e => {
+          e.preventDefault();
+          const factor = e.deltaY > 0 ? 1.1 : 0.9;
+          const rect = this.canvas.getBoundingClientRect();
+          const mx = (e.clientX - rect.left) / rect.width;
+          const my = (e.clientY - rect.top) / rect.height;
+          const xRange = this.xMax - this.xMin, yRange = this.yMax - this.yMin;
+          const cx = this.xMin + mx * xRange, cy = this.yMax - my * yRange;
+          const nxr = xRange * factor, nyr = yRange * factor;
+          this.xMin = cx - mx * nxr; this.xMax = cx + (1 - mx) * nxr;
+          this.yMin = cy - (1 - my) * nyr; this.yMax = cy + my * nyr;
+          this.draw();
+        }, { passive: false });
+
+        this.canvas.addEventListener('mousedown', e => {
+          // Check if clicking near the marker for dragging
+          if (this.markerX !== null && this.ast) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseCanvasX = (e.clientX - rect.left) / rect.width * this.canvas.width;
+            const mouseCanvasY = (e.clientY - rect.top) / rect.height * this.canvas.height;
+            const markerPx = this.toCanvasX(this.markerX);
+            const y0 = evaluate(this.ast, this.markerX);
+            const markerPy = this.toCanvasY(y0);
+            const dist = Math.sqrt((mouseCanvasX - markerPx) ** 2 + (mouseCanvasY - markerPy) ** 2);
+            if (dist < 20 * this.dpr) {
+              this.draggingMarker = true;
+              this.canvas.style.cursor = 'ew-resize';
+              return; // don't start panning
+            }
+          }
+          this.panning = true;
+          this.dragged = false;
+          this.panStart = { x: e.clientX, y: e.clientY };
+          this.canvas.style.cursor = 'grabbing';
+        });
+
+        this.canvas.addEventListener('mousemove', e => {
+          if (this.draggingMarker && this.ast) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) / rect.width;
+            this.markerX = this.xMin + mx * (this.xMax - this.xMin);
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+            return;
+          }
+        });
+
+        window.addEventListener('mousemove', e => {
+          if (!this.panning) return;
+          this.dragged = true;
+          const rect = this.canvas.getBoundingClientRect();
+          const dx = (e.clientX - this.panStart.x) / rect.width * (this.xMax - this.xMin);
+          const dy = (e.clientY - this.panStart.y) / rect.height * (this.yMax - this.yMin);
+          this.xMin -= dx; this.xMax -= dx;
+          this.yMin += dy; this.yMax += dy;
+          this.panStart = { x: e.clientX, y: e.clientY };
+          this.draw();
+        });
+
+        window.addEventListener('mouseup', (e) => {
+          if (this.draggingMarker) {
+            this.draggingMarker = false;
+            this.canvas.style.cursor = 'crosshair';
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+            return;
+          }
+          if (!this.panning) return;
+          this.panning = false;
+          this.canvas.style.cursor = 'crosshair';
+          if (!this.dragged && e.target === this.canvas) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mx = (e.clientX - rect.left) / rect.width;
+            this.markerX = this.xMin + mx * (this.xMax - this.xMin);
+            this.canvas.focus();
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+          }
+        });
+
+        // Keyboard arrow keys to move the marker
+        this.canvas.setAttribute('tabindex', '0');
+        this.canvas.style.outline = 'none';
+        this.canvas.addEventListener('keydown', e => {
+          if (this.markerX === null || !this.ast) return;
+          const step = 0.01;
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault();
+            this.markerX -= step;
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault();
+            this.markerX += step;
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+          }
+        });
+
+        this.canvas.style.cursor = 'crosshair';
+      }
+
+      _resize() {
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width * this.dpr;
+        this.canvas.height = rect.height * this.dpr;
+      }
+
+      toCanvasX(x) { return ((x - this.xMin) / (this.xMax - this.xMin)) * this.canvas.width; }
+      toCanvasY(y) { return ((this.yMax - y) / (this.yMax - this.yMin)) * this.canvas.height; }
+
+      draw() {
+        const { ctx, canvas } = this;
+        const w = canvas.width, h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+
+        // Background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+
+        this._drawGrid();
+        this._drawAxes();
+        if (this.ast) {
+          this._drawCurve();
+          if (this.mode === 'fn') {
+            this._drawTangent();
+          } else {
+            this._drawDerivMarker();
+          }
+        }
+      }
+
+      _niceStep(range, targetTicks) {
+        const rough = range / targetTicks;
+        const mag = Math.pow(10, Math.floor(Math.log10(rough)));
+        const norm = rough / mag;
+        let step;
+        if (norm < 1.5) step = 1;
+        else if (norm < 3) step = 2;
+        else if (norm < 7) step = 5;
+        else step = 10;
+        return step * mag;
+      }
+
+      _drawGrid() {
+        const { ctx } = this;
+        const xStep = this._niceStep(this.xMax - this.xMin, 10);
+        const yStep = this._niceStep(this.yMax - this.yMin, 10);
+
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+        ctx.lineWidth = 1;
+
+        let x0 = Math.ceil(this.xMin / xStep) * xStep;
+        for (let x = x0; x <= this.xMax; x += xStep) {
+          const px = this.toCanvasX(x);
+          ctx.beginPath(); ctx.moveTo(px, 0); ctx.lineTo(px, this.canvas.height); ctx.stroke();
+        }
+        let y0 = Math.ceil(this.yMin / yStep) * yStep;
+        for (let y = y0; y <= this.yMax; y += yStep) {
+          const py = this.toCanvasY(y);
+          ctx.beginPath(); ctx.moveTo(0, py); ctx.lineTo(this.canvas.width, py); ctx.stroke();
+        }
+      }
+
+      _drawAxes() {
+        const { ctx } = this;
+        const ox = this.toCanvasX(0), oy = this.toCanvasY(0);
+
+        // Axes lines
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1.5 * this.dpr;
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, this.canvas.height); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(this.canvas.width, oy); ctx.stroke();
+
+        // Tick labels
+        const xStep = this._niceStep(this.xMax - this.xMin, 10);
+        const yStep = this._niceStep(this.yMax - this.yMin, 10);
+        ctx.fillStyle = '#333333';
+        ctx.font = `${11 * this.dpr}px Inter, sans-serif`;
+        ctx.textAlign = 'center';
+
+        let x0 = Math.ceil(this.xMin / xStep) * xStep;
+        for (let x = x0; x <= this.xMax; x += xStep) {
+          if (Math.abs(x) < xStep * 0.01) continue;
+          const px = this.toCanvasX(x);
+          const label = Math.abs(x) < 1e-10 ? '0' : Number(x.toFixed(6));
+          ctx.fillText(label, px, oy + 16 * this.dpr);
+        }
+
+        ctx.textAlign = 'right';
+        let y0g = Math.ceil(this.yMin / yStep) * yStep;
+        for (let y = y0g; y <= this.yMax; y += yStep) {
+          if (Math.abs(y) < yStep * 0.01) continue;
+          const py = this.toCanvasY(y);
+          const label = Math.abs(y) < 1e-10 ? '0' : Number(y.toFixed(6));
+          ctx.fillText(label, ox - 8 * this.dpr, py + 4 * this.dpr);
+        }
+      }
+
+      _drawCurve() {
+        const { ctx, canvas, ast } = this;
+        const steps = canvas.width;
+        const dx = (this.xMax - this.xMin) / steps;
+
+        ctx.save();
+        ctx.shadowColor = this.glowColor;
+        ctx.shadowBlur = 16 * this.dpr;
+        ctx.strokeStyle = this.curveColor;
+        ctx.lineWidth = 2.5 * this.dpr;
+        ctx.lineJoin = 'round';
+        ctx.beginPath();
+        let drawing = false;
+        for (let i = 0; i <= steps; i++) {
+          const x = this.xMin + i * dx;
+          const y = evaluate(ast, x);
+          if (!isFinite(y) || Math.abs(y) > 1e6) { drawing = false; continue; }
+          const px = this.toCanvasX(x), py = this.toCanvasY(y);
+          if (!drawing) { ctx.moveTo(px, py); drawing = true; }
+          else ctx.lineTo(px, py);
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      setAST(ast) {
+        this.ast = ast;
+        this.markerX = null;
+        this.draw();
+      }
+
+      setRange(xMin, xMax, yMin, yMax) {
+        this.xMin = xMin;
+        this.xMax = xMax;
+        this.yMin = yMin;
+        this.yMax = yMax;
+        this.draw();
+      }
+
+      // Compute label font size: doubled base, scales at 50% of zoom rate
+      _labelFontSize(basePx) {
+        const defaultRange = 20; // default xMax - xMin
+        const currentRange = this.xMax - this.xMin;
+        const zoomFactor = defaultRange / currentRange; // >1 when zoomed in, <1 when zoomed out
+        // Scale at 50% rate: use sqrt-like blend: 1 + (zoomFactor - 1) * 0.5
+        const scaleFactor = 1 + (zoomFactor - 1) * 0.5;
+        return basePx * scaleFactor * this.dpr;
+      }
+
+      // ====== f(x) graph: tangent line + gradient label ======
+      _drawTangent() {
+        if (this.markerX === null || !this.ast) return;
+        const x0 = this.markerX;
+        const y0 = evaluate(this.ast, x0);
+        if (!isFinite(y0)) return;
+
+        // numerical derivative
+        const h = 1e-7;
+        const m = (evaluate(this.ast, x0 + h) - evaluate(this.ast, x0 - h)) / (2 * h);
+
+        const canvasMinX = this.xMin;
+        const canvasMaxX = this.xMax;
+
+        // y - y0 = m * (x - x0)
+        const y1 = m * (canvasMinX - x0) + y0;
+        const y2 = m * (canvasMaxX - x0) + y0;
+
+        const { ctx } = this;
+        ctx.save();
+
+        // Tangent line (dashed pink)
+        ctx.strokeStyle = '#ff007f';
+        ctx.lineWidth = 1.5 * this.dpr;
+        ctx.setLineDash([5 * this.dpr, 5 * this.dpr]);
+        ctx.beginPath();
+        ctx.moveTo(this.toCanvasX(canvasMinX), this.toCanvasY(y1));
+        ctx.lineTo(this.toCanvasX(canvasMaxX), this.toCanvasY(y2));
+        ctx.stroke();
+
+        // Highlight point
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#ff007f';
+        ctx.beginPath();
+        ctx.arc(this.toCanvasX(x0), this.toCanvasY(y0), 5 * this.dpr, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Gradient label on tangent
+        const xRounded = Number(x0.toFixed(3));
+        const mRounded = Math.abs(m) < 1e-10 ? 0 : Number(m.toFixed(4));
+        const label = `x = ${xRounded}, gradient ; m = ${mRounded}`;
+        const px = this.toCanvasX(x0);
+        const py = this.toCanvasY(y0);
+        const fontSize = this._labelFontSize(24); // doubled from 12
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        ctx.fillStyle = '#ff007f';
+        ctx.textAlign = 'left';
+
+        // Position label slightly above/below the point depending on space
+        const labelX = px + 12 * this.dpr;
+        const labelY = py - fontSize * 1.2;
+
+        // Background for readability
+        const textMetrics = ctx.measureText(label);
+        const textW = textMetrics.width;
+        const textH = fontSize * 1.1;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(labelX - 4 * this.dpr, labelY - textH, textW + 8 * this.dpr, textH + 6 * this.dpr);
+
+        ctx.fillStyle = '#ff007f';
+        ctx.fillText(label, labelX, labelY - 2 * this.dpr);
+
+        ctx.restore();
+      }
+
+      // ====== f'(x) graph: horizontal dotted line to y-axis + coordinate ======
+      _drawDerivMarker() {
+        if (this.markerX === null || !this.ast) return;
+        const x0 = this.markerX;
+        const y0 = evaluate(this.ast, x0);
+        if (!isFinite(y0)) return;
+
+        const { ctx } = this;
+        ctx.save();
+
+        const px = this.toCanvasX(x0);
+        const py = this.toCanvasY(y0);
+        const axisX = this.toCanvasX(0); // y-axis position
+
+        // Dotted horizontal line from point back to y-axis
+        ctx.strokeStyle = '#0000ff';
+        ctx.lineWidth = 1.5 * this.dpr;
+        ctx.setLineDash([4 * this.dpr, 4 * this.dpr]);
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(axisX, py);
+        ctx.stroke();
+
+        // Highlight point
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#0000ff';
+        ctx.beginPath();
+        ctx.arc(px, py, 5 * this.dpr, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Coordinate label ON the point
+        const coordLabel = `(${Number(x0.toFixed(3))}, ${Number(y0.toFixed(3))})`;
+        const fontSize = this._labelFontSize(22); // doubled from 11
+        ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+        const textMetrics = ctx.measureText(coordLabel);
+        const textW = textMetrics.width;
+        const textH = fontSize * 1.1;
+
+        // Background for readability
+        const labelX = px + 12 * this.dpr;
+        const labelY = py - fontSize * 1.0;
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.fillRect(labelX - 3 * this.dpr, labelY - textH, textW + 6 * this.dpr, textH + 4 * this.dpr);
+
+        ctx.fillStyle = '#0000ff';
+        ctx.textAlign = 'left';
+        ctx.fillText(coordLabel, labelX, labelY - 2 * this.dpr);
+
+        ctx.restore();
+      }
+    }
+
+    /* ==========================================================
+       APP CONTROLLER
+       ========================================================== */
+    const fnGraph = new GraphRenderer('canvas-fn', '#000000', 'rgba(0,0,0,0)', 'fn');
+    const derivGraph = new GraphRenderer('canvas-deriv', '#0000ff', 'rgba(0,0,255,0.2)', 'deriv');
+
+    const fnInput = document.getElementById('fn-input');
+    const enterBtn = document.getElementById('enter-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const derivDisplay = document.getElementById('deriv-display');
+
+    const rangeXMin = document.getElementById('range-xmin');
+    const rangeXMax = document.getElementById('range-xmax');
+    const rangeYMin = document.getElementById('range-ymin');
+    const rangeYMax = document.getElementById('range-ymax');
+
+    const rangeDXMin = document.getElementById('range-dxmin');
+    const rangeDXMax = document.getElementById('range-dxmax');
+    const rangeDYMin = document.getElementById('range-dymin');
+    const rangeDYMax = document.getElementById('range-dymax');
+
+    function getFnRange() {
+      return {
+        xMin: parseFloat(rangeXMin.value) || -10,
+        xMax: parseFloat(rangeXMax.value) || 10,
+        yMin: parseFloat(rangeYMin.value) || -10,
+        yMax: parseFloat(rangeYMax.value) || 10,
+      };
+    }
+
+    function getDerivRange() {
+      return {
+        xMin: parseFloat(rangeDXMin.value) || -10,
+        xMax: parseFloat(rangeDXMax.value) || 10,
+        yMin: parseFloat(rangeDYMin.value) || -10,
+        yMax: parseFloat(rangeDYMax.value) || 10,
+      };
+    }
+
+    function handleSubmit() {
+      const raw = fnInput.value.trim();
+      errorMsg.textContent = '';
+      if (!raw) { errorMsg.textContent = 'Please enter a function.'; return; }
+
+      try {
+        const tokens = tokenise(raw);
+        const ast = parse(tokens);
+        const derivAst = simplify(diff(ast));
+
+        // Apply range from inputs
+        const r = getFnRange();
+        fnGraph.setRange(r.xMin, r.xMax, r.yMin, r.yMax);
+        const dr = getDerivRange();
+        derivGraph.setRange(dr.xMin, dr.xMax, dr.yMin, dr.yMax);
+
+        // Display only derivative in deriv panel
+        derivDisplay.innerHTML = `
+          <div>
+            <div class="fn-label">f ′(x) =</div>
+            <div class="fn-expr derivative">${astToString(derivAst)}</div>
+          </div>
+        `;
+
+        fnGraph.setAST(ast);
+        derivGraph.setAST(derivAst);
+      } catch (err) {
+        errorMsg.textContent = err.message;
+      }
+    }
+
+    enterBtn.addEventListener('click', handleSubmit);
+    fnInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmit(); });
+
+    // Enter key on f(x) range inputs triggers submit
+    [rangeXMin, rangeXMax, rangeYMin, rangeYMax].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') handleSubmit(); });
+    });
+
+    // Derivative range apply button
+    const derivEnterBtn = document.getElementById('deriv-enter-btn');
+    function applyDerivRange() {
+      const dr = getDerivRange();
+      derivGraph.setRange(dr.xMin, dr.xMax, dr.yMin, dr.yMax);
+      derivGraph.draw();
+    }
+    derivEnterBtn.addEventListener('click', applyDerivRange);
+
+    // Enter key on f'(x) range inputs triggers deriv range apply
+    [rangeDXMin, rangeDXMax, rangeDYMin, rangeDYMax].forEach(el => {
+      el.addEventListener('keydown', e => { if (e.key === 'Enter') applyDerivRange(); });
+    });
+
+    // ===== Lock Button =====
+    let isLocked = false;
+    const lockBtn = document.getElementById('lock-btn');
+    lockBtn.addEventListener('click', () => {
+      isLocked = !isLocked;
+      if (isLocked) {
+        lockBtn.textContent = '🔒 Locked';
+        lockBtn.style.background = 'linear-gradient(135deg, var(--accent), #9b6aff)';
+        lockBtn.style.color = '#fff';
+        lockBtn.style.borderColor = 'transparent';
+        // Sync markers: set both to whichever has a value
+        if (fnGraph.markerX !== null) {
+          derivGraph.markerX = fnGraph.markerX;
+          derivGraph.draw();
+        } else if (derivGraph.markerX !== null) {
+          fnGraph.markerX = derivGraph.markerX;
+          fnGraph.draw();
+        }
+      } else {
+        lockBtn.textContent = '🔓 Lock Points';
+        lockBtn.style.background = 'transparent';
+        lockBtn.style.color = 'var(--accent)';
+        lockBtn.style.borderColor = 'var(--accent)';
+      }
+    });
+
+    // Sync function: when one graph's marker moves, update the other
+    function syncLockedMarker(source) {
+      if (!isLocked) return;
+      if (source === fnGraph) {
+        derivGraph.markerX = fnGraph.markerX;
+        derivGraph.draw();
+      } else {
+        fnGraph.markerX = derivGraph.markerX;
+        fnGraph.draw();
+      }
+    }
+  </script>
+</body>
+
+</html>
