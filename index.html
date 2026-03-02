@@ -903,14 +903,55 @@
       }
 
       _drawAxes() {
-        const { ctx } = this;
+        const { ctx, canvas } = this;
+        const w = canvas.width, h = canvas.height;
         const ox = this.toCanvasX(0), oy = this.toCanvasY(0);
+        const arrowSize = 10 * this.dpr;
 
         // Axes lines
         ctx.strokeStyle = '#000000';
         ctx.lineWidth = 1.5 * this.dpr;
-        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, this.canvas.height); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(this.canvas.width, oy); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ox, 0); ctx.lineTo(ox, h); ctx.stroke();  // Y-axis
+        ctx.beginPath(); ctx.moveTo(0, oy); ctx.lineTo(w, oy); ctx.stroke();  // X-axis
+
+        // --- Arrowheads ---
+        ctx.fillStyle = '#000000';
+
+        // Y-axis top arrow
+        ctx.beginPath();
+        ctx.moveTo(ox, 0);
+        ctx.lineTo(ox - arrowSize * 0.45, arrowSize);
+        ctx.lineTo(ox + arrowSize * 0.45, arrowSize);
+        ctx.closePath(); ctx.fill();
+
+        // Y-axis bottom arrow
+        ctx.beginPath();
+        ctx.moveTo(ox, h);
+        ctx.lineTo(ox - arrowSize * 0.45, h - arrowSize);
+        ctx.lineTo(ox + arrowSize * 0.45, h - arrowSize);
+        ctx.closePath(); ctx.fill();
+
+        // X-axis right arrow
+        ctx.beginPath();
+        ctx.moveTo(w, oy);
+        ctx.lineTo(w - arrowSize, oy - arrowSize * 0.45);
+        ctx.lineTo(w - arrowSize, oy + arrowSize * 0.45);
+        ctx.closePath(); ctx.fill();
+
+        // X-axis left arrow
+        ctx.beginPath();
+        ctx.moveTo(0, oy);
+        ctx.lineTo(arrowSize, oy - arrowSize * 0.45);
+        ctx.lineTo(arrowSize, oy + arrowSize * 0.45);
+        ctx.closePath(); ctx.fill();
+
+        // --- Axis labels ---
+        ctx.font = `bold ${14 * this.dpr}px Inter, sans-serif`;
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'left';
+        ctx.fillText('y', ox + 8 * this.dpr, arrowSize + 14 * this.dpr);  // near top of y-axis
+        ctx.textAlign = 'right';
+        ctx.fillText('x', w - arrowSize - 4 * this.dpr, oy - 8 * this.dpr);  // near right of x-axis
 
         // Tick labels
         const xStep = this._niceStep(this.xMax - this.xMin, 10);
@@ -1023,30 +1064,35 @@
         ctx.arc(this.toCanvasX(x0), this.toCanvasY(y0), 5 * this.dpr, 0, Math.PI * 2);
         ctx.fill();
 
-        // Gradient label on tangent
+        // Gradient label — two separate lines
         const xRounded = Number(x0.toFixed(3));
-        const mRounded = Math.abs(m) < 1e-10 ? 0 : Number(m.toFixed(4));
-        const label = `x = ${xRounded}, gradient ; m = ${mRounded}`;
+        const mRounded = Math.abs(m) < 1e-10 ? 0 : Number(m.toFixed(3));
+        const line1 = `x = ${xRounded}`;
+        const line2 = `gradient ; m = ${mRounded}`;
         const px = this.toCanvasX(x0);
         const py = this.toCanvasY(y0);
-        const fontSize = this._labelFontSize(24); // doubled from 12
+        const fontSize = this._labelFontSize(24);
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         ctx.fillStyle = '#ff007f';
         ctx.textAlign = 'left';
 
-        // Position label slightly above/below the point depending on space
+        // Position: two lines stacked above the point
         const labelX = px + 12 * this.dpr;
-        const labelY = py - fontSize * 1.2;
+        const lineGap = fontSize * 1.25;
+        const labelY1 = py - lineGap * 2.0;   // first line
+        const labelY2 = labelY1 + lineGap;     // second line (below)
 
-        // Background for readability
-        const textMetrics = ctx.measureText(label);
-        const textW = textMetrics.width;
-        const textH = fontSize * 1.1;
+        // Background sized for both lines
+        const tw1 = ctx.measureText(line1).width;
+        const tw2 = ctx.measureText(line2).width;
+        const textW = Math.max(tw1, tw2);
+        const textH = lineGap * 2.2;
         ctx.fillStyle = 'rgba(255,255,255,0.85)';
-        ctx.fillRect(labelX - 4 * this.dpr, labelY - textH, textW + 8 * this.dpr, textH + 6 * this.dpr);
+        ctx.fillRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 8 * this.dpr, textH + 4 * this.dpr);
 
         ctx.fillStyle = '#ff007f';
-        ctx.fillText(label, labelX, labelY - 2 * this.dpr);
+        ctx.fillText(line1, labelX, labelY1);
+        ctx.fillText(line2, labelX, labelY2);
 
         ctx.restore();
       }
@@ -1082,7 +1128,7 @@
         ctx.fill();
 
         // Coordinate label ON the point
-        const coordLabel = `(${Number(x0.toFixed(3))}, ${Number(y0.toFixed(3))})`;
+        const coordLabel = `(${x0.toFixed(3)}, ${y0.toFixed(3)})`;
         const fontSize = this._labelFontSize(22); // doubled from 11
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
         const textMetrics = ctx.measureText(coordLabel);
