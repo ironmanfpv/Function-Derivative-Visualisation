@@ -336,7 +336,8 @@
       <div class="panel-header">Function Input</div>
       <div class="input-group">
         <label for="fn-input">f(x) =</label>
-        <input type="text" id="fn-input" placeholder="e.g.  x^3 - 2*x + 1" autocomplete="off" spellcheck="false" />
+        <input type="text" id="fn-input" placeholder="e.g.  x^3 - 2*x + 1" autocomplete="off" spellcheck="false"
+          autocapitalize="none" autocorrect="off" />
 
         <label style="margin-top:4px;">f(x) Axis Range</label>
         <div class="range-row">
@@ -434,7 +435,7 @@
     function tokenise(expr) {
       const tokens = [];
       let i = 0;
-      const s = expr.replace(/\s+/g, '');
+      const s = expr.replace(/\s+/g, '').toLowerCase();
       while (i < s.length) {
         const c = s[i];
         if ('0123456789.'.includes(c)) {
@@ -813,6 +814,79 @@
             const mx = (e.clientX - rect.left) / rect.width;
             this.markerX = this.xMin + mx * (this.xMax - this.xMin);
             this.canvas.focus();
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+          }
+        });
+
+        // --- Touch Support ---
+        const getTouchPos = e => {
+          const rect = this.canvas.getBoundingClientRect();
+          const t = e.touches[0] || e.changedTouches[0];
+          return {
+            x: t ? t.clientX : 0,
+            y: t ? t.clientY : 0
+          };
+        };
+
+        this.canvas.addEventListener('touchstart', e => {
+          const pos = getTouchPos(e);
+          if (this.markerX !== null && this.ast) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseCanvasX = (pos.x - rect.left) / rect.width * this.canvas.width;
+            const mouseCanvasY = (pos.y - rect.top) / rect.height * this.canvas.height;
+            const markerPx = this.toCanvasX(this.markerX);
+            const y0 = evaluate(this.ast, this.markerX);
+            const markerPy = this.toCanvasY(y0);
+            const dist = Math.sqrt((mouseCanvasX - markerPx) ** 2 + (mouseCanvasY - markerPy) ** 2);
+            if (dist < 40 * this.dpr) { // Larger hit area for touch
+              this.draggingMarker = true;
+              e.preventDefault();
+              return;
+            }
+          }
+          this.panning = true;
+          this.dragged = false;
+          this.panStart = { x: pos.x, y: pos.y };
+          if (e.target === this.canvas) e.preventDefault();
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchmove', e => {
+          if (!this.draggingMarker && !this.panning) return;
+          const pos = getTouchPos(e);
+          if (this.draggingMarker && this.ast) {
+            const rect = this.canvas.getBoundingClientRect();
+            const mx = (pos.x - rect.left) / rect.width;
+            this.markerX = this.xMin + mx * (this.xMax - this.xMin);
+            this.draw();
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+            e.preventDefault();
+          } else if (this.panning) {
+            this.dragged = true;
+            const rect = this.canvas.getBoundingClientRect();
+            const dx = (pos.x - this.panStart.x) / rect.width * (this.xMax - this.xMin);
+            const dy = (pos.y - this.panStart.y) / rect.height * (this.yMax - this.yMin);
+            this.xMin -= dx; this.xMax -= dx;
+            this.yMin += dy; this.yMax += dy;
+            this.panStart = { x: pos.x, y: pos.y };
+            this.draw();
+            e.preventDefault();
+          }
+        }, { passive: false });
+
+        this.canvas.addEventListener('touchend', e => {
+          if (this.draggingMarker) {
+            this.draggingMarker = false;
+            if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
+            return;
+          }
+          if (!this.panning) return;
+          this.panning = false;
+          if (!this.dragged) {
+            const pos = getTouchPos(e);
+            const rect = this.canvas.getBoundingClientRect();
+            const mx = (pos.x - rect.left) / rect.width;
+            this.markerX = this.xMin + mx * (this.xMax - this.xMin);
             this.draw();
             if (typeof syncLockedMarker === 'function') syncLockedMarker(this);
           }
