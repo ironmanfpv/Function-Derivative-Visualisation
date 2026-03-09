@@ -1224,18 +1224,6 @@
         if (labelY1 < fontSize * 1.5) labelY1 = py + 25 * this.dpr; // flip below point
         const labelY2 = labelY1 + lineGap;
 
-        // Background sized for both lines
-        const tw1 = ctx.measureText(line1).width;
-        const tw2 = ctx.measureText(line2).width;
-        const textW = Math.max(tw1, tw2);
-        const textH = lineGap * 2.2;
-
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 10 * this.dpr, textH);
-        ctx.strokeStyle = '#ff007f33';
-        ctx.lineWidth = 1 * this.dpr;
-        ctx.strokeRect(labelX - 4 * this.dpr, labelY1 - fontSize, textW + 10 * this.dpr, textH);
-
         ctx.fillStyle = '#ff007f';
         ctx.fillText(line1, labelX, labelY1);
         ctx.fillText(line2, labelX, labelY2);
@@ -1277,20 +1265,10 @@
         const coordLabel = `(${x0.toFixed(3)}, ${y0.toFixed(3)})`;
         const fontSize = this._labelFontSize(22); // doubled from 11
         ctx.font = `bold ${fontSize}px Inter, sans-serif`;
-        const textMetrics = ctx.measureText(coordLabel);
-        const textW = textMetrics.width;
-        const textH = fontSize * 1.1;
-
-        // Background for readability — flip if near top
+        // Label position — flip if near top
         const labelX = px + 12 * this.dpr;
         let labelY = py - fontSize * 1.1;
         if (labelY < fontSize * 1.2) labelY = py + 25 * this.dpr; // flip below
-
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.fillRect(labelX - 4 * this.dpr, labelY - textH + 2 * this.dpr, textW + 10 * this.dpr, textH);
-        ctx.strokeStyle = '#0000ff33';
-        ctx.lineWidth = 1 * this.dpr;
-        ctx.strokeRect(labelX - 4 * this.dpr, labelY - textH + 2 * this.dpr, textW + 10 * this.dpr, textH);
 
         ctx.fillStyle = '#0000ff';
         ctx.textAlign = 'left';
