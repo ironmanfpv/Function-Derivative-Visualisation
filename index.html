@@ -1302,6 +1302,12 @@
 
         // Apply range from inputs
         const r = getFnRange();
+        if (isLocked) {
+          rangeDXMin.value = r.xMin;
+          rangeDXMax.value = r.xMax;
+          rangeDYMin.value = r.yMin;
+          rangeDYMax.value = r.yMax;
+        }
         fnGraph.setRange(r.xMin, r.xMax, r.yMin, r.yMax);
         const dr = getDerivRange();
         derivGraph.setRange(dr.xMin, dr.xMax, dr.yMin, dr.yMax);
@@ -1333,6 +1339,14 @@
     const derivEnterBtn = document.getElementById('deriv-enter-btn');
     function applyDerivRange() {
       const dr = getDerivRange();
+      if (isLocked) {
+        rangeXMin.value = dr.xMin;
+        rangeXMax.value = dr.xMax;
+        rangeYMin.value = dr.yMin;
+        rangeYMax.value = dr.yMax;
+        fnGraph.setRange(dr.xMin, dr.xMax, dr.yMin, dr.yMax);
+        fnGraph.draw();
+      }
       derivGraph.setRange(dr.xMin, dr.xMax, dr.yMin, dr.yMax);
       derivGraph.draw();
     }
