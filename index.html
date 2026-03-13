@@ -46,8 +46,7 @@
       font-family: 'Inter', system-ui, sans-serif;
       background: var(--bg-primary);
       color: var(--text);
-      overflow-x: hidden;
-      overflow-y: auto;
+      overflow: auto;
     }
 
     /* ===== Layout ===== */
@@ -56,6 +55,7 @@
       grid-template-columns: 1fr 5fr;
       grid-template-rows: 1fr 1fr;
       min-height: 100vh;
+      min-width: 900px;
       height: 100vh;
       gap: 10px;
       padding: 10px;
@@ -299,42 +299,7 @@
       border-radius: 3px;
     }
 
-    /* ===== Responsive ===== */
-    @media (max-width: 900px) {
-      body {
-        height: auto;
-      }
-      .app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 400px auto 400px;
-        height: auto;
-        min-height: 100vh;
-      }
-
-      #input-panel {
-        grid-column: 1;
-        grid-row: 1;
-        overflow-y: visible;
-      }
-
-      .canvas-panel.top {
-        grid-column: 1;
-        grid-row: 2;
-        min-height: 300px;
-      }
-
-      #deriv-panel {
-        grid-column: 1;
-        grid-row: 3;
-        overflow-y: visible;
-      }
-
-      .canvas-panel.bottom {
-        grid-column: 1;
-        grid-row: 4;
-        min-height: 300px;
-      }
-    }
+    /* ===== Scrollbar ===== */
   </style>
 </head>
 
