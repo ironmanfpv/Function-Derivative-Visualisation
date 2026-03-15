@@ -2,8 +2,19 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/((?!index\\.html|style\\.css|script\\.js|public/).*)",
+      "source": "/((?!.*\\.(?:css|js|ico|png|jpg|jpeg|gif|svg|webp|woff|woff2|ttf|eot)$).*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
     }
   ]
 }
