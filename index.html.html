@@ -1,4 +1,403 @@
-/* ==========================================================
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Visualise mathematical functions and their derivatives on interactive Cartesian planes. A learning tool for students.">
+  <title>Function &amp; Derivative Visualiser</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="icon" href="public/images/favicon.ico" type="image/x-icon">
+  <style>
+    /* ===== CSS Reset & Variables ===== */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg-primary: #0f0f1a;
+      --bg-panel: #d6e8f7;
+      --bg-input: #e8f1fa;
+      --border: #a8c4df;
+      --accent: #7c6aff;
+      --accent-glow: rgba(124, 106, 255, .35);
+      --accent2: #00e5a0;
+      --accent2-glow: rgba(0, 229, 160, .30);
+      --text: #1a1a2e;
+      --text-muted: #4a5568;
+      --curve-fn: #000000;
+      --curve-deriv: #0000ff;
+      --grid: #1e1e38;
+      --axis: #4a4a6a;
+      --radius: 14px;
+      --shadow: 0 4px 24px rgba(0, 0, 0, .4);
+    }
+
+    html,
+    body {
+      height: 100%;
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text);
+      overflow: auto;
+    }
+
+    /* ===== Layout ===== */
+    .app {
+      display: grid;
+      grid-template-columns: 1fr 5fr;
+      grid-template-rows: 1fr 1fr;
+      min-height: 100vh;
+      min-width: 900px;
+      height: 100vh;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    /* ===== Left Panels (shared styling) ===== */
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 16px 20px 8px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.6px;
+      color: var(--text-muted);
+    }
+
+    /* --- Input Panel (top-left) --- */
+    #input-panel {
+      grid-column: 1;
+      grid-row: 1;
+      overflow-y: auto;
+    }
+
+    .input-group {
+      padding: 12px 20px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .input-group label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    #fn-input,
+    .range-input {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 10px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: var(--bg-input);
+      color: var(--text);
+      outline: none;
+      transition: border-color .25s, box-shadow .25s;
+      width: 100%;
+    }
+
+    #fn-input:focus,
+    .range-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    #fn-input::placeholder,
+    .range-input::placeholder {
+      color: #8899aa;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .range-field label {
+      display: block;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    #enter-btn {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 12px 0;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, var(--accent), #9b6aff);
+      color: #fff;
+      letter-spacing: .4px;
+      transition: transform .15s, box-shadow .25s;
+    }
+
+    #enter-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px var(--accent-glow);
+    }
+
+    #enter-btn:active {
+      transform: scale(.97);
+    }
+
+    #error-msg {
+      font-size: 12px;
+      color: #ff6b8a;
+      min-height: 18px;
+      transition: opacity .3s;
+    }
+
+    .hint {
+      margin-top: auto;
+      padding: 0 20px 16px;
+      font-size: 11px;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+
+    .hint code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg-input);
+      padding: 1px 5px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+
+    /* --- Derivative Panel (bottom-left) --- */
+    #deriv-panel {
+      grid-column: 1;
+      grid-row: 2;
+      overflow-y: auto;
+    }
+
+    .deriv-display {
+      padding: 16px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 14px;
+    }
+
+    .fn-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      margin-bottom: 2px;
+    }
+
+    .fn-expr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 15px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      word-break: break-word;
+      line-height: 1.6;
+    }
+
+    .fn-expr.original {
+      background: rgba(0, 0, 0, .05);
+      border-left: 3px solid var(--curve-fn);
+      color: var(--curve-fn);
+    }
+
+    .fn-expr.derivative {
+      background: rgba(0, 0, 255, .05);
+      border-left: 3px solid var(--curve-deriv);
+      color: var(--curve-deriv);
+    }
+
+    .fn-placeholder {
+      font-size: 13px;
+      color: #7788aa;
+      font-style: italic;
+    }
+
+    /* ===== Canvas Panels (right) ===== */
+    .canvas-panel {
+      grid-column: 2;
+      position: relative;
+    }
+
+    .canvas-panel.top {
+      grid-row: 1;
+    }
+
+    .canvas-panel.bottom {
+      grid-row: 2;
+    }
+
+    .canvas-panel canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius);
+      display: block;
+    }
+
+    .canvas-label {
+      position: absolute;
+      top: 14px;
+      left: 18px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      padding: 5px 12px;
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .canvas-label.fn {
+      background: rgba(0, 0, 0, .05);
+      color: var(--curve-fn);
+      border: 1px solid rgba(0, 0, 0, .15);
+    }
+
+    .canvas-label.deriv {
+      background: rgba(0, 0, 255, .05);
+      color: var(--curve-deriv);
+      border: 1px solid rgba(0, 0, 255, .15);
+    }
+
+    /* ===== Scrollbar ===== */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #8aaccf;
+      border-radius: 3px;
+    }
+
+    /* ===== Scrollbar ===== */
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- Top-left: Function Input -->
+    <div class="panel" id="input-panel">
+      <div class="panel-header">Function Input</div>
+      <div class="input-group">
+        <label for="fn-input">f(x) =</label>
+        <input type="text" id="fn-input" placeholder="e.g.  x^3 - 2*x + 1" autocomplete="off" spellcheck="false"
+          autocapitalize="none" autocorrect="off" />
+
+        <label style="margin-top:4px;">f(x) Axis Range</label>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-xmin">x min</label>
+            <input type="number" id="range-xmin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-xmax">x max</label>
+            <input type="number" id="range-xmax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-ymin">y min</label>
+            <input type="number" id="range-ymin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-ymax">y max</label>
+            <input type="number" id="range-ymax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+
+        <button id="enter-btn">ENTER</button>
+        <div id="error-msg"></div>
+      </div>
+      <div class="hint">
+        Supported: <code>x</code>, <code>^</code>, <code>sin</code>, <code>cos</code>,
+        <code>tan</code>, <code>ln</code>, <code>sqrt</code>, <code>e</code>, <code>pi</code>
+      </div>
+    </div>
+
+    <!-- Top-right: f(x) graph -->
+    <div class="panel canvas-panel top" id="fn-canvas-panel">
+      <span class="canvas-label fn">f(x)</span>
+      <canvas id="canvas-fn"></canvas>
+    </div>
+
+    <!-- Bottom-left: Derivative display -->
+    <div class="panel" id="deriv-panel">
+      <div class="panel-header">Derivative</div>
+      <div class="deriv-display" id="deriv-display">
+        <div class="fn-placeholder" id="fn-placeholder-orig">Enter a function above…</div>
+      </div>
+      <div class="input-group" style="padding-top:0;">
+        <label>f ′(x) Axis Range</label>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-dxmin">x min</label>
+            <input type="number" id="range-dxmin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-dxmax">x max</label>
+            <input type="number" id="range-dxmax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <div class="range-row">
+          <div class="range-field">
+            <label for="range-dymin">y min</label>
+            <input type="number" id="range-dymin" class="range-input" placeholder="-10" value="-10" step="0.01" />
+          </div>
+          <div class="range-field">
+            <label for="range-dymax">y max</label>
+            <input type="number" id="range-dymax" class="range-input" placeholder="10" value="10" step="0.01" />
+          </div>
+        </div>
+        <button id="deriv-enter-btn"
+          style="font-family:'Inter',sans-serif;font-size:14px;font-weight:600;padding:12px 0;border:none;border-radius:10px;cursor:pointer;background:linear-gradient(135deg,var(--accent),#9b6aff);color:#fff;letter-spacing:.4px;transition:transform .15s,box-shadow .25s;margin-top:4px;">ENTER</button>
+        <button id="lock-btn"
+          style="font-family:'Inter',sans-serif;font-size:13px;font-weight:600;padding:10px 0;border:2px solid var(--accent);border-radius:10px;cursor:pointer;background:transparent;color:var(--accent);letter-spacing:.4px;transition:all .2s;margin-top:4px;">🔓
+          Lock Points</button>
+      </div>
+    </div>
+
+    <!-- Bottom-right: f'(x) graph -->
+    <div class="panel canvas-panel bottom" id="deriv-canvas-panel">
+      <span class="canvas-label deriv">f ′(x)</span>
+      <canvas id="canvas-deriv"></canvas>
+    </div>
+
+  </div>
+
+  <script>
+    /* ==========================================================
        MATH ENGINE — Tokeniser → Parser → AST → Derivative → Eval
        ========================================================== */
 
@@ -996,3 +1395,7 @@
         fnGraph.draw();
       }
     }
+  </script>
+</body>
+
+</html>
